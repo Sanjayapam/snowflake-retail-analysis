@@ -1,5 +1,3 @@
---- Ranking Store dengan sales Tertinggi-----------
-
 with daily_sales as (
 select
 t.date,
