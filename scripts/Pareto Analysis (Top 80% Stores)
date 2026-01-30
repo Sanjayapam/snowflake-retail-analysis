@@ -1,0 +1,42 @@
+with base as (
+select
+s.store_nbr,
+s.city,
+s.state,
+round (sum (t.sales),2) total_sales
+from"SALES"."PUBLIC"."TRAIN" t
+left join "SALES"."PUBLIC"."STORES" s
+on t.store_nbr = s.store_nbr
+where t.sales != 0
+group by 1,2,3
+),
+daily_sales as (
+select
+b.store_nbr,
+b.city,
+b.state,
+b.total_sales,
+coalesce(sum(tr.transactions),0) total_transaksi
+from base b
+left join "SALES"."PUBLIC"."TRANSACTIONS" tr
+on b.store_nbr = tr.store_nbr
+group by 1,2,3,4
+),
+agg_sales as (
+select*,
+round (sum (total_sales) over (),2) total_sales_store,
+row_number() over (order by total_sales desc) rank_store
+from daily_sales
+),
+cumulative_sales as (
+select*,
+round (sum (total_sales) over (order by total_sales desc),2) cum_sales
+from agg_sales
+)
+select*,
+round(cum_sales/total_sales_store*100,2) pct_pareto,
+case
+when cum_sales/total_sales_store <= 0.8 then 'Top 80'
+else 'Remaining 20%'
+end as flag_pareto
+from cumulative_sales;
